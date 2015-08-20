@@ -1,6 +1,6 @@
 (ns docopt.core
   (:require [clojure.string      :as string])
-  (:require [docopt.match        :as match])
+  (:require [docopt.match        :refer [match-argv]])
   (:require [docopt.optionsblock :as option])
   (:require [docopt.usageblock   :as usage])
   (:require [docopt.util         :as util])
@@ -8,19 +8,29 @@
 
 (defn parse-docstring
   "Parses doc string."
-  [doc]
-  (letfn [(sec-re   [name]          (re-pattern (str "(?:^|\\n)(?!\\s).*(?i)" name ":\\s*(.*(?:\\n(?=[ \\t]).+)*)")))
-          (section  [name splitfn]  (map string/trim (mapcat (comp splitfn second) (re-seq (sec-re name) doc))))
-          (osplitfn [options-block] (re-seq #"(?<=^|\n)\s*-.*(?:\s+[^- \t\n].*)*" options-block))]
-    (usage/parse (section "usage" string/split-lines) (option/parse (section "options" osplitfn)))))
+  [docstring]
+  (let [usage-pattern #"(?:^|\n)(?!\s).*(?i)usage:\s*(.*(?:\n(?=[ \t]).+)*)"
+        options-pattern #"(?:^|\n)(?!\s).*(?i)options:\s*(.*(?:\n(?=[ \t]).+)*)"
+        ops-split-fn (fn [options-block] (re-seq #"(?<=^|\n)\s*-.*(?:\s+[^- \t\n].*)*" options-block))
+        fetch-section (fn [pattern split-fn docs]
+                        (->> (re-find pattern docs)
+                             (second) ; drop the Title of the section (Usage | Options)
+                             (split-fn) ; split the text into lines
+                             (map string/trim))) ; take away the trailing whitespaces
+        usage-section (fetch-section usage-pattern string/split-lines docstring)
+        options-section (fetch-section options-pattern ops-split-fn docstring)]
+    (usage/parse usage-section
+                 (option/parse options-section))))
 
 (defn docopt
-  "Parses doc string at compile-time and matches command line arguments at run-time.
-The doc string may be omitted, in which case the metadata of '-main' is used"
+  "Parses doc string and matches command line arguments. The doc string may be omitted,
+  in which case the metadata of '-main' is used"
+  ([]
+   (docopt *command-line-args*)
   ([args]
-    (let [doc (:doc (meta (find-var (symbol (pr-str (ns-name *ns*)) "-main"))))]
-      (if (string? doc)
-        (match/match-argv (parse-docstring doc) args)
-        (throw (Exception. "Docopt with one argument requires that #'-main have a doc string.\n")))))
+   (let [docstring (:doc (meta (find-var (symbol (pr-str (ns-name *ns*)) "-main"))))]
+     (docopt docstring args)))
   ([doc args]
-    (match/match-argv (parse-docstring doc) args)))
+    (if (string? doc)
+      (match-argv (parse-docstring doc) args)
+      (throw (Exception. "Docopt with one argument requires that #'-main have a doc string.\n")))))
