@@ -1,6 +1,6 @@
 (ns docopt.core-test
   (:require [clojure.data.json :as json])
-  (:require [clojure.string    :as s])  
+  (:require [clojure.string    :as s])
   (:require [docopt.core       :as d])
   (:require [docopt.match      :as m])
   (:use     clojure.test))
@@ -21,7 +21,7 @@
 
 (defn load-test-cases
   "Loads language-agnostic docopt tests from file (such as testcases.docopt)."
-  [path] 
+  [path]
   (into [] (mapcat (fn [[_ doc tests]]
                    (map (fn [[_ args result]]
                           [doc (into [] (filter seq (s/split (or args "") #"\s+"))) (json/read-str result)])
@@ -31,13 +31,13 @@
 (defn test-case-error-report
   "Returns a report of all failed test cases"
   [doc in out]
-  (let [docinfo (try (d/parse doc) 
+  (let [docinfo (try (d/parse-docstring doc)
                   (catch Exception e (.getMessage e)))]
     (if (string? docinfo)
       (str "\n" (s/trim-newline doc) "\n" docinfo)
       (let [result (or (m/match-argv docinfo in) "user-error")]
         (if (not= result out)
-          (str "\n" (s/trim-newline doc) "\n$ prog " (s/join " " in) 
+          (str "\n" (s/trim-newline doc) "\n$ prog " (s/join " " in)
                "\nexpected: " out "\nobtained: " result "\n\n"))))))
 
 (defn valid?
