@@ -1,15 +1,24 @@
 # docopt.clj
+![version](https://img.shields.io/badge/version-0.6-blue.svg)
+[![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg?style=plastic)](https://raw.githubusercontent.com/carocad/docopt.clj/master/LICENSE)
 
-Clojure implementation of the [docopt](http://docopt.org/) language, version 0.6,
-under a [MIT license](http://github.com/docopt/docopt.clj/blob/master/LICENSE).
+Creates beautiful command-line interfaces.
+A good help message has all necessary information in it to make a parser.
+
+Clojure implementation of the [docopt](http://docopt.org/) language,
 
 ## Usage
 
-Add `[docopt "0.6.1"]` to your dependencies in `project.clj`
+- add `[docopt "0.6.1"]` to your dependencies in `project.clj`
+- import it to your CLI
+- put the docstring in the -main function
+- call (docopt)
+
+No arguments, just let the magic beging !
 
 ``` clojure
 (ns example.core
-  (:require [docopt.core :refer [docopt]])) ; import the docopt function from docopt.core
+  (:require [docopt.core :refer [docopt]]))
 
 (defn -main
 "Naval Fate.
@@ -30,7 +39,7 @@ Options:
   --drifting    Drifting mine."
 
   [& args]
-  (let [arguments (docopt args)]
+  (let [arguments (docopt)]
         (println arguments))) ; with only one argument, docopt parses -main's docstring.
 ```
 
