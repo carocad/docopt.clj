@@ -3,8 +3,7 @@
   (:require [docopt.match        :refer [match-argv]])
   (:require [docopt.optionsblock :as option])
   (:require [docopt.usageblock   :as usage])
-  (:require [docopt.util         :as util])
-  (:import java.util.HashMap))
+  (:require [docopt.util         :as util]))
 
 (defn parse-docstring
   "Parses doc string."
@@ -26,11 +25,14 @@
   "Parses doc string and matches command line arguments. The doc string may be omitted,
   in which case the metadata of '-main' is used"
   ([]
-   (docopt *command-line-args*)
-  ([args]
-   (let [docstring (:doc (meta (find-var (symbol (pr-str (ns-name *ns*)) "-main"))))]
-     (docopt docstring args)))
-  ([doc args]
-    (if (string? doc)
-      (match-argv (parse-docstring doc) args)
-      (throw (Exception. "Docopt with one argument requires that #'-main have a doc string.\n")))))
+   (let [docstring (-> (ns-publics *ns*) ; get the public functions in ns
+                       ('-main)
+                       (meta)
+                       (:doc))]
+     (if (string? docstring)
+       (docopt docstring *command-line-args*)
+       (throw (Exception. "Docopt with NO argument requires -main to have docstring.\n")))))
+  ([docstring]
+    (docopt docstring *command-line-args*))
+  ([docstring args]
+    (match-argv (parse-docstring docstring) args)))
