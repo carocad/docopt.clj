@@ -1,9 +1,8 @@
 (ns docopt.core
   (:require [clojure.string      :as string])
-  (:require [docopt.match        :refer [match-argv]])
+  (:require [docopt.match        :as match])
   (:require [docopt.optionsblock :as option])
-  (:require [docopt.usageblock   :as usage])
-  (:require [docopt.util         :as util]))
+  (:require [docopt.usageblock   :as usage]))
 
 (defn parse-docstring
   "Parses doc string."
@@ -35,4 +34,4 @@
   ([docstring]
     (docopt docstring *command-line-args*))
   ([docstring args]
-    (match-argv (parse-docstring docstring) args)))
+    (match/associate (parse-docstring docstring) args)))
