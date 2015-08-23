@@ -6,11 +6,11 @@
 
 ;; parse command line
 
-(defmultimethods expand 
-  "Expands command line tokens using provided sequence of options." 
-  [[tag name arg :as token] options] 
+(defmultimethods expand
+  "Expands command line tokens using provided sequence of options."
+  [[tag name arg :as token] options]
   tag
-  :word          [name]  
+  :word          [name]
   :long-option   (let [exactfn   #(= name (:long %))
                        partialfn #(= name (subs (:long %) 0 (min (count (:long %)) (count name))))]
                    [{(first (concat (filter exactfn options) (filter partialfn options))) arg}])
@@ -22,7 +22,7 @@
   [{:keys [acc shorts-re longs-re]} argv]
   (let [[head _ & tail] (partition-by (partial = "--") argv)
         options         (remove string? (keys acc))
-        tokens          (mapcat #(expand % options) (tokenize (s/join " " head) 
+        tokens          (mapcat #(expand % options) (tokenize (s/join " " head)
                                                               (concat (map vector longs-re  (repeat :long-option))
                                                                       (map vector shorts-re (repeat :short-options))
                                                                       [[(re-tok "-\\S+|(\\S+)")     :word]])))]
@@ -33,7 +33,7 @@
 
 ;; walk pattern tree
 
-(defmultimethods consume 
+(defmultimethods consume
   "If command line state matches tree node, update accumulator, else return nil."
   [[type key :as pattern] [acc options [word & more-words :as cmdseq] :as state]]
   type
@@ -46,8 +46,8 @@
                                       new-to (if head (if to (conj to head) head) (if to (inc to) true))]
                                   [(assoc acc key new-to) (assoc options key tail) cmdseq])
                                 (if (:default-value key) state)))
-    
-(defmultimethods matches 
+
+(defmultimethods matches
   "If command line state matches tree node, update accumulator, else return nil."
   [states [type & children :as pattern]]
   type
@@ -58,22 +58,22 @@
   :docopt.usageblock/required (reduce matches states children)
   :docopt.usageblock/repeat   (let [new-states (matches states (first children))]
                                 (if (= states new-states)
-                                  states                 
+                                  states
                                   (into new-states (matches new-states pattern)))))
 
 ;;
 
-(defn option-value 
+(defn option-value
   "Helper function for 'match-argv' to present option values and deal with defaults."
   [[{:keys [long short default-value]} value]]
-  [(if long (str "--" long) (str "-" short)) 
-   (cond 
+  [(if long (str "--" long) (str "-" short))
+   (cond
      (nil? value) default-value
      (= [] value) (if (vector? default-value) default-value [default-value])
      true         value)])
 
-(defn match-argv 
-  "Match command-line arguments with usage patterns."
+(defn associate
+  "Associate the command-line arguments with usage patterns."
   [docmap argv]
   (if-let [state (parse docmap argv)]
     (if-let [[match] (first (filter #(every? empty? (cons (% 2) (vals (% 1)))) (matches #{state} (:tree docmap))))]
