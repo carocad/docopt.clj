@@ -1,5 +1,6 @@
 (ns docopt.util
-  (:require [clojure.string :as s]))
+  (:require [clojure.string :as s])
+  (:use clojure.tools.trace))
 
 (defn check-error
   [condition message return-val]
@@ -25,12 +26,12 @@
 
 (def re-arg-str "(<[^<>]*>|[A-Z_0-9]*[A-Z_][A-Z_0-9]*)") ; argument pattern
 
-(defn re-tok
+(deftrace re-tok
   "Generates tokenization regexp, bounded by whitespace or string beginning / end."
   [& patterns]
   (re-pattern (str "(?<=^| )" (apply str patterns) "(?=$| )")))
 
-(defn tokenize
+(deftrace tokenize
   "Repeatedly extracts tokens from string according to sequence of [re tag];
   tokens are of the form [tag & groups] as captured by the corresponding regex."
   [string pairs]
