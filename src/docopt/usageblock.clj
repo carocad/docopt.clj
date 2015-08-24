@@ -38,7 +38,7 @@
 
 ;; tokenize usage block
 
-(deftrace tokenize-pattern
+(defn- tokenize-pattern
   "Extracts all tokens from usage pattern specification string;
 'shorts/longs-re' are used to appropriately tokenize all possibly ambiguous options."
   [string shorts-re longs-re]
@@ -56,7 +56,7 @@
                          [(re-tok re-arg-str)                  ::argument]
                          [(re-tok "(\\S+)")                    ::command]])))
 
-(deftrace find-option
+(defn- find-option
   "Returns the corresponding option object in the 'options' sequence, or generates a new one."
   [name-key name arg lnum options]
   (let [takes-arg (not (empty? arg))
@@ -76,7 +76,7 @@
                    (conj (into [] (map (partial new-short nil) (butlast name)))
                          (new-short arg (last name)))))
 
-(deftrace tokenize-pattern-lines
+(defn- tokenize-pattern-lines
   "Helper function for 'tokenize-patterns'."
   [lines options]
   (let [shorts-re (compile-short-options-re (filter :short options) true)
@@ -87,7 +87,7 @@
                                    (tokenize-pattern (string/replace line #"\s+" " ") shorts-re longs-re)))
                          lines))))
 
-(deftrace tokenize-patterns
+(defn- tokenize-patterns
   "Generates a sequence of tokens for a sequence of usage specification lines joined by ' | '."
   [lines options-block-options]
   (let [tokens              (tokenize-pattern-lines lines options-block-options)
@@ -101,16 +101,16 @@
 
 ;; generate syntax tree
 
-(deftrace push-last [stack node]
+(defn- push-last [stack node]
   (conj (pop stack) (conj (pop (peek stack)) (conj (peek (peek stack)) node))))
 
-(deftrace peek-last [stack]
+(defn- peek-last [stack]
   (peek (peek (peek stack))))
 
-(deftrace pop-last [stack]
+(defn- pop-last [stack]
   (conj (pop stack) (conj (pop (peek stack)) (pop (peek (peek stack))))))
 
-(deftrace make-choices
+(defn- make-choices
   "Generates the children of a ::choice node, where 'group-type' is either ::optional or ::required."
   [group-type children]
   (letfn [(mfn [[[head-tag & _ :as head] & tail :as group-body]]
@@ -125,7 +125,7 @@
                  (conj choices child)))]
     (reduce rfn [] (map mfn children))))
 
-(deftrace end-group
+(defn- end-group
   "Updates stack with a fully-formed group."
   [stack [choice & more-choices :as choices]]
   (if (seq more-choices)
@@ -184,17 +184,25 @@
   ::group  (reduce +   0 (map (partial occurs element) children))
   ::choice (reduce max 0 (map (partial occurs element) children)))
 
-(defn parse
-  "Parses usage block, with a sequence of options from the options block to resolve pattern ambiguities."
-  [names arguments options-lines]
+(defn- make-tree
+  [names arguments tokenized-options]
   {:pre [(is (apply = names) "SYNTAX ERROR: Inconsistent program name in usage patterns: ")]}
-    (let [tokens                       (tokenize-patterns arguments options-lines)
+  (let [tokens                       (tokenize-patterns arguments tokenized-options)
           tree                         (syntax-tree tokens)
           [options commands arguments] (collect-atoms tokens)
           accfn                        #(vector %3 (if (< 1 (occurs %3 tree)) %1 %2))]
       {:name       (first names)
        :tree       tree
-       :shorts-re  (compile-short-options-re (filter :short options-lines) false)
-       :longs-re   (compile-long-options-re  (filter :long  options-lines) false)
+       :shorts-re  (compile-short-options-re (filter :short tokenized-options) false)
+       :longs-re   (compile-long-options-re  (filter :long  tokenized-options) false)
        :acc        (into {} (concat (map (partial accfn [] nil)  (concat arguments (filter :takes-arg options)))
                                     (map (partial accfn 0 false) (concat commands  (remove :takes-arg options)))))}))
+
+(defn parse
+  "Parses usage block, with a sequence of options from the options block to resolve pattern ambiguities."
+  [usage-lines tokenized-options]
+  ; split the program name from the usage line
+  (let [names&arguments (map #(string/split % #"\s*(\s+)" 2) usage-lines)]
+    (make-tree (map first names&arguments)
+               (map second names&arguments)
+               tokenized-options)))

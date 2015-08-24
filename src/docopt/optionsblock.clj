@@ -2,14 +2,16 @@
   (:require [clojure.string :as string])
   (:require [docopt.util :as util]))
 
-(defn parse2
-  [option-lines]
-  (let [tokenized-options (map tokenize options-lines)]
-    ;REVIEW: Is there a more clean way to check this?
-    (assert (and (distinct? (filter identity (map :long tokenized-options)))
-                 (distinct? (filter identity (map :short tokenized-options))))
-            "SYNTAX ERROR: In options descriptions, at least one option defined
-            more than once.")))
+; REVIEW: should this be really public?
+(def option-types {:default   #"\s{2,}(?s).*\[(?i)default(?-i):\s*([^\]]+).*"
+                   :short     #"(?:^|\s+),?\s*-([^-,])"
+                   :long      #"(?:^|\s+),?\s*--([^ \t=,]+)"
+                   :arg       #"(<[^<>]*>|[A-Z_0-9]*[A-Z_][A-Z_0-9]*\s)"})
+
+; REVIEW: do we really need this?
+(defn takes-arg?
+  [{:keys [arg]}]
+  (true? arg))
 
 (defn- tokenize ; wait until you can replace the complete function below
   "Generates a sequence of tokens for an option specification string."
@@ -19,16 +21,14 @@
             :long    (second (re-find (:long option-types) line))
             :arg     (first (re-find (:arg option-types) line))))
 
-; REVIEW: do we really need this?
-(defn takes-arg?
-  [{:keys [arg]}]
-  (true? arg))
-
-; REVIEW: should this be really public?
-(def option-types {:default   #"\s{2,}(?s).*\[(?i)default(?-i):\s*([^\]]+).*"
-                   :short     #"(?:^|\s+),?\s*-([^-,])"
-                   :long      #"(?:^|\s+),?\s*--([^ \t=,]+)"
-                   :arg       #"(<[^<>]*>|[A-Z_0-9]*[A-Z_][A-Z_0-9]*\s)"})
+(defn parse2
+  [option-lines]
+  (let [tokenized-options (map tokenize option-lines)]
+    ;REVIEW: Is there a more clean way to check this?
+    (assert (and (distinct? (filter identity (map :long tokenized-options)))
+                 (distinct? (filter identity (map :short tokenized-options))))
+            "SYNTAX ERROR: In options descriptions, at least one option defined
+            more than once.")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -39,7 +39,7 @@
                     [#"\s{2,}(?s).*"] ; description of the option
                     [#"(?:^|\s+),?\s*-([^-,])"                       :short]
                     [#"(?:^|\s+),?\s*--([^ \t=,]+)"                  :long]
-                    [(re-pattern re-arg-str)                         :arg]
+                    [(re-pattern util/re-arg-str)                         :arg]
                     [#"\s*[=,]?\s*"]])) ; UNKNOWN
 
 (defn- parse-option
