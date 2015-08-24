@@ -1,13 +1,15 @@
 (ns docopt.usageblock
   (:require [clojure.string :as string])
-  (:use      docopt.util))
+  (:require [clojure.test :refer [is]])
+  (:use      docopt.util)
+  (:use clojure.tools.trace))
 
 (specialize {::token [::repeat ::options ::option ::command ::argument ::group ::choice ::end-group]
              ::group [::required ::optional]})
 
 ;; ambiguities
 
-(defn partial-long-re-str
+(deftrace partial-long-re-str
   "Creates partial match pattern for long option name."
   [names re-str [c & more-c]]
   (let [[match & more-matches :as matches] (filter #(= c (first %)) names)]
@@ -15,14 +17,14 @@
       (apply str re-str c (interleave more-c (repeat \?)))
       (recur (filter seq (map rest matches)) (str re-str c) more-c))))
 
-(defn compile-long-options-re
+(deftrace compile-long-options-re
   "Generates regexes to unambiguously capture long options, for usage pattern parsing or for argv matching."
   [long-options pattern-parsing?]
   (let [longs (map :long long-options)]
     (into [] (map #(re-tok "--(" (if pattern-parsing? %1 (partial-long-re-str longs "" %1)) ")" %2)
                   longs (map #(if (:takes-arg %) "(?:=| )(\\S+)") long-options)))))
 
-(defn compile-short-options-re
+(deftrace compile-short-options-re
   "Generates regexes to unambiguously capture short options, for usage pattern parsing or for argv matching."
   [short-options pattern-parsing?]
   (let [no-arg-shorts (apply str (map :short (remove :takes-arg short-options)))]
@@ -36,7 +38,7 @@
 
 ;; tokenize usage block
 
-(defn tokenize-pattern
+(deftrace tokenize-pattern
   "Extracts all tokens from usage pattern specification string;
 'shorts/longs-re' are used to appropriately tokenize all possibly ambiguous options."
   [string shorts-re longs-re]
@@ -54,7 +56,7 @@
                          [(re-tok re-arg-str)                  ::argument]
                          [(re-tok "(\\S+)")                    ::command]])))
 
-(defn find-option
+(deftrace find-option
   "Returns the corresponding option object in the 'options' sequence, or generates a new one."
   [name-key name arg lnum options]
   (let [takes-arg (not (empty? arg))
@@ -74,7 +76,7 @@
                    (conj (into [] (map (partial new-short nil) (butlast name)))
                          (new-short arg (last name)))))
 
-(defn tokenize-pattern-lines
+(deftrace tokenize-pattern-lines
   "Helper function for 'tokenize-patterns'."
   [lines options]
   (let [shorts-re (compile-short-options-re (filter :short options) true)
@@ -85,7 +87,7 @@
                                    (tokenize-pattern (string/replace line #"\s+" " ") shorts-re longs-re)))
                          lines))))
 
-(defn tokenize-patterns
+(deftrace tokenize-patterns
   "Generates a sequence of tokens for a sequence of usage specification lines joined by ' | '."
   [lines options-block-options]
   (let [tokens              (tokenize-pattern-lines lines options-block-options)
@@ -99,16 +101,16 @@
 
 ;; generate syntax tree
 
-(defn- push-last [stack node]
+(deftrace push-last [stack node]
   (conj (pop stack) (conj (pop (peek stack)) (conj (peek (peek stack)) node))))
 
-(defn- peek-last [stack]
+(deftrace peek-last [stack]
   (peek (peek (peek stack))))
 
-(defn- pop-last [stack]
+(deftrace pop-last [stack]
   (conj (pop stack) (conj (pop (peek stack)) (pop (peek (peek stack))))))
 
-(defn make-choices
+(deftrace make-choices
   "Generates the children of a ::choice node, where 'group-type' is either ::optional or ::required."
   [group-type children]
   (letfn [(mfn [[[head-tag & _ :as head] & tail :as group-body]]
@@ -123,7 +125,7 @@
                  (conj choices child)))]
     (reduce rfn [] (map mfn children))))
 
-(defn end-group
+(deftrace end-group
   "Updates stack with a fully-formed group."
   [stack [choice & more-choices :as choices]]
   (if (seq more-choices)
@@ -184,14 +186,8 @@
 
 (defn parse
   "Parses usage block, with a sequence of options from the options block to resolve pattern ambiguities."
-  [usage-lines options-lines]
-  (let [names-&-arguments (map (fn [line] (string/split line #"\s*(\s+)" 2))  ; split the program name from the usage line
-                                usage-lines)
-        names (map first names-&-arguments)
-        arguments (map second names-&-arguments)]
-    (assert (apply = names)
-            (str "ERROR: Inconsistent program name in usage patterns: "
-                 (string/join ", " (hash-set names))))
+  [names arguments options-lines]
+  {:pre [(is (apply = names) "SYNTAX ERROR: Inconsistent program name in usage patterns: ")]}
     (let [tokens                       (tokenize-patterns arguments options-lines)
           tree                         (syntax-tree tokens)
           [options commands arguments] (collect-atoms tokens)
@@ -201,4 +197,4 @@
        :shorts-re  (compile-short-options-re (filter :short options-lines) false)
        :longs-re   (compile-long-options-re  (filter :long  options-lines) false)
        :acc        (into {} (concat (map (partial accfn [] nil)  (concat arguments (filter :takes-arg options)))
-                                    (map (partial accfn 0 false) (concat commands  (remove :takes-arg options)))))})))
+                                    (map (partial accfn 0 false) (concat commands  (remove :takes-arg options)))))}))
