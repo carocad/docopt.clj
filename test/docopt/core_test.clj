@@ -1,54 +1,50 @@
 (ns docopt.core-test
   (:require [clojure.data.json :as json])
-  (:require [clojure.string    :as s])
-  (:require [docopt.core       :as d])
-  (:require [docopt.match      :as m])
-  (:use     clojure.test))
+  (:require [clojure.string    :as string])
+  (:require [docopt.core       :refer [docopt]])
+  (:require [clojure.test :refer [is]]))
 
-(def doc-block-regex
-  (let [doc-begin  "r\\\"{3}"
-        doc-body   "((?:\\\"{0,2}[^\\\"]+)*)"
-        separator  "\\\"{3}\n+"
-        tests      "((?:[^r]|r(?!\\\"{3}))*)"]
-    (re-pattern (str doc-begin doc-body separator tests))))
+(def ^:private test-section-regex #"(?s)r\"{3}(.*?)(?:\n{3})")
+(def ^:private docstring-regex #"(?s)(?:r\"{3})(.*?)(?:\"{3})")
+(def ^:private input-regex #"(?s)(?:\$ )(.*?)\n")
+(def ^:private return-regex #"(?:\$.*\n)(\{.*\}|\"user-error\")")
 
-(def test-block-regex
-  (let [input-begin "(?:\\A|\\n+)\\s*\\$\\s*prog"
-        input-body  "(.*)"
-        separator   "\\n"
-        tests       "((?:.+\\n)*)"]
-    (re-pattern (str input-begin input-body separator tests))))
+(def ^:private test-file-url "https://raw.github.com/docopt/docopt/511d1c57b59cd2ed663a9f9e181b5160ce97e728/testcases.docopt")
+(def ^:private test-file (slurp test-file-url))
 
-(defn load-test-cases
-  "Loads language-agnostic docopt tests from file (such as testcases.docopt)."
-  [path]
-  (into [] (mapcat (fn [[_ doc tests]]
-                   (map (fn [[_ args result]]
-                          [doc (into [] (filter seq (s/split (or args "") #"\s+"))) (json/read-str result)])
-                        (re-seq test-block-regex tests)))
-                 (re-seq doc-block-regex (s/replace (slurp path) #"#.*" "")))))
+(defn- make-inputs
+  [section]
+  (let [full-str       (map second (re-seq input-regex section))
+        raw-arguments  (map #(string/split % #"\s*(\s+)") full-str)]
+    (map rest raw-arguments)))
 
-(defn test-case-error-report
-  "Returns a report of all failed test cases"
-  [doc in out]
-  (let [docinfo (try (d/parse-docstring doc)
-                  (catch Exception e (.getMessage e)))]
-    (if (string? docinfo)
-      (str "\n" (s/trim-newline doc) "\n" docinfo)
-      (let [result (or (m/match-argv docinfo in) "user-error")]
-        (if (not= result out)
-          (str "\n" (s/trim-newline doc) "\n$ prog " (s/join " " in)
-               "\nexpected: " out "\nobtained: " result "\n\n"))))))
+(defn- make-returns
+  [section]
+  (map second (re-seq return-regex section)))
 
-(defn valid?
-  "Validates all test cases found in the file named 'test-cases-file-name'."
-  [test-cases-file-name]
-  (let [test-cases (load-test-cases test-cases-file-name)]
-    (when-let [eseq (seq (remove nil? (map (partial apply test-case-error-report) test-cases)))]
-      (println "Failed" (count eseq) "/" (count test-cases) "tests loaded from '" test-cases-file-name "'.\n")
-      (throw (Exception. (apply str eseq))))
-    (println "Successfully passed" (count test-cases) "tests loaded from '" test-cases-file-name "'.\n")
-    true))
+(defn- user-error?
+  [return-value]
+  (= "user-error" return-value))
 
-(deftest docopt
-  (is (valid? "https://raw.github.com/docopt/docopt/511d1c57b59cd2ed663a9f9e181b5160ce97e728/testcases.docopt")))
+(defn- docopt-work?
+  [docstring input return]
+  (if (user-error? return)
+    (is (= docstring docstring)) ;FIX-ME This should run a real test
+    (is (= return return)))) ; FIX-ME this should run a real test
+
+(defn- test-section
+  [section]
+  (let [docstring (first (map second (re-seq docstring-regex section)))
+        input-collection (make-inputs section)
+        return-collection (make-returns section)]
+    (map docopt-work? (repeat docstring)
+                      (map seq input-collection)
+                      return-collection)))
+
+; FIX-ME dont just take the first element but the whole collection
+(defn- all-tests
+  []
+  (let [coll-sections (first (map first (re-seq test-section-regex test-file)))]
+    (test-section coll-sections)))
+
+(all-tests)
