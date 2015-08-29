@@ -1,14 +1,14 @@
 # docopt.clj
-![version](https://img.shields.io/badge/version-0.6-blue.svg)
+![version](https://img.shields.io/badge/version-0.1-blue.svg)
 [![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg?style=plastic)](https://raw.githubusercontent.com/carocad/docopt.clj/master/LICENSE)
 
-Creates beautiful command-line interfaces.
-A good help message has all necessary information in it to make a parser.
+Creates beautiful command-line interfaces using only your docstring. After all, a good help message has all necessary information in it to make a parser
 
-Clojure implementation of the [docopt](http://docopt.org/) language,
+Clojure (unnoficial) implementation of the [docopt](http://docopt.org/) language,
+
+## DONT USE THIS YET. THIS PROJECT IS UNDER HEAVY DEVELOPMENT
 
 ## Usage
-
 - add `[docopt "0.6.1"]` to your dependencies in `project.clj`
 - import it to your CLI
 - put the docstring in the -main function
@@ -51,3 +51,4 @@ The tests are automatically downloaded from the language-agnostic
 [511d1c57b5](https://github.com/docopt/docopt/tree/511d1c57b59cd2ed663a9f9e181b5160ce97e728).
 Please feel free to (re)open an issue in case this implementation falls behind.
 
+copyright Camilo Roca
