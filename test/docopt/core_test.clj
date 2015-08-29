@@ -26,25 +26,25 @@
   [return-value]
   (= "user-error" return-value))
 
-(defn- docopt-work?
+; TODO: print a test number or similar and if the test was successfull
+(defn- docopt-works?
   [docstring input return]
   (if (user-error? return)
-    (is (= docstring docstring)) ;FIX-ME This should run a real test
-    (is (= return return)))) ; FIX-ME this should run a real test
+    (is (= docstring (docopt docstring input)))
+    (is (= return (docopt docstring input)))))
 
 (defn- test-section
   [section]
   (let [docstring (first (map second (re-seq docstring-regex section)))
         input-collection (make-inputs section)
         return-collection (make-returns section)]
-    (map docopt-work? (repeat docstring)
+    (map docopt-works? (repeat docstring)
                       (map seq input-collection)
                       return-collection)))
 
-; FIX-ME dont just take the first element but the whole collection
 (defn- all-tests
   []
-  (let [coll-sections (first (map first (re-seq test-section-regex test-file)))]
-    (test-section coll-sections)))
+  (let [coll-sections (map first (re-seq test-section-regex test-file))]
+    (map test-section coll-sections)))
 
 (all-tests)
