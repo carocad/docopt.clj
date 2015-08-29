@@ -9,7 +9,7 @@
 
 ;; ambiguities
 
-(deftrace partial-long-re-str
+(defn- partial-long-re-str
   "Creates partial match pattern for long option name."
   [names re-str [c & more-c]]
   (let [[match & more-matches :as matches] (filter #(= c (first %)) names)]
@@ -17,14 +17,14 @@
       (apply str re-str c (interleave more-c (repeat \?)))
       (recur (filter seq (map rest matches)) (str re-str c) more-c))))
 
-(deftrace compile-long-options-re
+(defn- compile-long-options-re
   "Generates regexes to unambiguously capture long options, for usage pattern parsing or for argv matching."
   [long-options pattern-parsing?]
   (let [longs (map :long long-options)]
     (into [] (map #(re-tok "--(" (if pattern-parsing? %1 (partial-long-re-str longs "" %1)) ")" %2)
                   longs (map #(if (:takes-arg %) "(?:=| )(\\S+)") long-options)))))
 
-(deftrace compile-short-options-re
+(defn- compile-short-options-re
   "Generates regexes to unambiguously capture short options, for usage pattern parsing or for argv matching."
   [short-options pattern-parsing?]
   (let [no-arg-shorts (apply str (map :short (remove :takes-arg short-options)))]
