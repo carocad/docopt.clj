@@ -99,9 +99,9 @@
       :required        #(combi/cat %) ; LATER: does this really work?
       :optional        #(combi/opt %)
       :exclusive       #(apply combi/alt %&)
-      :usage-line      #(apply combi/cat (rest %&)) ; drop the name of the program
+      :usage-line      #(combi/hide-tag (apply combi/cat (rest %&))) ; drop the name of the program & ignore the use-tag
       :USAGE           (fn [& args]
-                         (let [use-names     (map keyword (map #(str "use" %) (range (count args))))
+                         (let [use-names     (map #(keyword (str "use" %)) (range (count args)))
                                use-nt        (map combi/nt use-names)
                                start-content (apply combi/alt use-nt)
                                start         (hash-map :USAGE start-content)
@@ -117,9 +117,10 @@
         combi-elements   (map hash-map (map first main-elements) (map combi/ebnf (map second main-elements)))
         panacea          (into (translate-grammar (first parsed-docstring) all-elements)
                                combi-elements)]
-    ((insta/parser panacea
-                  :start :USAGE
-                  :auto-whitespace :standard) args)))
+    (insta/transform {:USAGE #(into (hash-map) %&)}
+      ((insta/parser panacea
+                     :start :USAGE
+                     :auto-whitespace :standard) args))))
 
 (defn docopt
   "Parses doc string and matches command line arguments. The doc string may be omitted,
