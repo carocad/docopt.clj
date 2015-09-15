@@ -1,4 +1,4 @@
-# docopt.clj
+# docopt.cluno
 ![version](https://img.shields.io/badge/version-0.1-blue.svg)
 [![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg?style=plastic)](https://raw.githubusercontent.com/carocad/docopt.clj/master/LICENSE)
 
@@ -6,13 +6,13 @@ Creates beautiful command-line interfaces using only your docstring. After all, 
 
 Clojure (unnoficial) implementation of the [docopt](http://docopt.org/) language,
 
-## DONT USE THIS YET. THIS PROJECT IS UNDER HEAVY DEVELOPMENT
-
 ## Usage
-- add `[docopt "0.6.1"]` to your dependencies in `project.clj`
-- import it to your CLI
-- put the docstring in the -main function
-- call (docopt)
+Docopt.cluno exposes a single function in docopt.core called "docopt". You can call it with:
+- 0 arguments; docstrings fetched from -main :doc metadata and *command-line-args* clojure global reference.
+- 1 argument = docstring
+- 2 arguments = docstring arguments list
+
+This project is still under development, thus a clojar is sadly not yet available. Please be patient.
 
 No arguments, just let the magic beging !
 
@@ -35,8 +35,8 @@ Options:
   -h --help     Show this screen.
   --version     Show version.
   --speed=<kn>  Speed in knots [default: 10].
-  --moored      Moored (anchored) mine.
-  --drifting    Drifting mine."
+  --moored      Moored mine
+  --drifting    Drifting mine"
 
   [& args]
   (let [arguments (docopt)]
@@ -44,11 +44,11 @@ Options:
 ```
 
 ## Tests
-
 Run `lein test` to validate all tests.
-The tests are automatically downloaded from the language-agnostic
-`testcases.docopt` file in the reference implementation, master branch commit
-[511d1c57b5](https://github.com/docopt/docopt/tree/511d1c57b59cd2ed663a9f9e181b5160ce97e728).
-Please feel free to (re)open an issue in case this implementation falls behind.
+
+# Notes
+This project does NOT yet cover all of the original docopt Python implementation. Some of them are yet to be implemented and some are not going to be implemented at all due to a difference of opinion in the ambiguities that the docopt language should accept.
+
+Pull request and are more than welcome :)
 
 copyright Camilo Roca
