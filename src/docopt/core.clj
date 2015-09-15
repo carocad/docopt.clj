@@ -6,6 +6,7 @@
 ;TODO accept parenthesis () as a valid characters in the option description. EX (anchored)
 
 (def ^:private grammar-parser
+  "Docopt language grammar specification"
   (insta/parser
    "<DOCSTRING> = [<DESCRIPTION>] USAGE [OPTIONS]
     DESCRIPTION = #'(?si).*?(?:(?!usage).)*'
@@ -45,6 +46,8 @@
   ((first element) (into (hash-set) tags)))
 
 (defn- make-option
+  "create a hash-map of name-instaparse.combinator based on the different kind of long/short options and if
+  an option accepts arguments."
   [option-hash]
   (let [{:keys [short-option long-option option-arg]} option-hash]
     (cond
@@ -66,13 +69,17 @@
   {(keyword content) (combi/regexp "\\S+")})
 
 (defn- get-elements
+  "based on the parsed usage and options section, get the commands, arguments
+  and options. Each element is transformed into a key-value pair with the key
+  its name (<one> --two -t ...), each value is the corresponding
+  instaparse.combinators to be matched against."
   [usage-tree options-tree]
    (let [option-lines  (map rest (rest options-tree))
          elements      (->> (tree-seq vector? identity usage-tree)
                             (filter #(and (vector? %) (not (tag-match? % :USAGE :usage-line :multiple :exclusive :required :optional))))
                             (group-by #(first %)))
          fetch-all     (fn [tag] (into (hash-set) (map second (tag elements))))
-         names         (fetch-all :name)
+         names         (fetch-all :name) ; TODO: check that only one element is here
          commands      (map make-element (fetch-all :command))
          arguments     (map make-argument (fetch-all :argument))
          ;usg-options   (into (fetch-all :long-option)
@@ -81,6 +88,9 @@
      (into {} (apply concat commands arguments options))))
 
 (defn- translate-grammar
+  "conver the docopt argument-parsing language-grammar into EBNF notation using
+  instaparse.combinators. The complete Usage section is converted into an flat
+  alternation (use1 | use2 | ...) based on each usage line."
   [parsed-usage short->long-option]
   (insta/transform
      {:command         #(combi/nt (keyword %))
@@ -102,19 +112,21 @@
      parsed-usage))
 
 (defn- argument-grammar
+  "Creates a grammar specification hash-map for instaparse/parser to work with."
   [docstring]
   (let [grammar-tree         (grammar-parser docstring)
         all-elements         (get-elements (first grammar-tree) (second grammar-tree))
         main-elements        (into {} (filter #(not (keyword? (second %))) (seq all-elements)))
         short->long-option   (into {} (filter #(keyword? (second %)) (seq all-elements)))]
     ;(insta/transform {:USAGE #(into (hash-map) %&)}
-    ;(insta/transform {:USAGE #(merge-with concat {} %&)}
     (into (translate-grammar (first grammar-tree) short->long-option)
           main-elements)))
 
 (defn docopt
-  "Parses doc string and matches command line arguments. The doc string may be omitted,
-  in which case the metadata of '-main' is used"
+  "Parses docopt argument-parsing language and returns a hash-map with the
+  command line arguments according to the described use cases.
+  If no docstring is provided, it defaults to -main :doc metadata.
+  If no arguments are given, clojure's *command-line-args* are used."
   ([]
    (let [docstring (-> (ns-publics *ns*) ; get the public functions in ns
                        ('-main)
@@ -124,33 +136,7 @@
   ([docstring]
     (docopt docstring *command-line-args*))
   ([docstring args]
-   (let [arg-tree   (argument-grammar docstring)
-         arg-parser (insta/parser arg-tree :start :USAGE :auto-whitespace :standard)]
-     (arg-parser args))))
-
-(defn -main
-  "Naval Fate is a game
-
-Usage:
-  naval_fate ship new <name>...
-  naval_fate ship <name> move <x> <y> [--speed KN]
-  naval_fate ship shoot <x> <y>
-  naval_fate mine (set|remove) <x> <y> [--moored|--drifting]
-  naval_fate -h | --help
-  naval_fate --version
-
-  Options:
-  -h --help     Show this screen
-  --version     Show version
-  --speed KN    Speed in knots [default: 10]
-  --moored      Moored anchored mine
-  --drifting    Drifting mine"
-  [args]
-  (docopt (:doc (meta (var -main)))
-          args))
-
-(apply hash-map [:a 2])
-(apply merge-with conj {:a [] :b []} (map #(into {} %&) (list [:a 2] [:b 2] [:a 3])))
-
-; FIX-ME transform the result such that the right combination is archieved
-(-main "ship new boat guardian")
+   (let [arg-tree    (argument-grammar docstring)
+         arg-parser  (insta/parser arg-tree :start :USAGE :auto-whitespace :standard)
+         parsed-argv (arg-parser (clojure.string/join " " args))]
+     (insta/transform {:USAGE #(into (hash-map) %&)}  parsed-argv))))
