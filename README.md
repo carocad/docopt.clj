@@ -51,4 +51,4 @@ This project does NOT yet cover all of the original docopt Python implementation
 
 Pull request and are more than welcome :)
 
-copyright Camilo Roca
+Copyright (c) 2015 Camilo Roca
