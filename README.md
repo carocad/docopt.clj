@@ -8,11 +8,11 @@ Clojure (unnoficial) implementation of the [docopt](http://docopt.org/) language
 
 ## Usage
 Docopt.cluno exposes a single function in docopt.core called "docopt". You can call it with:
-- 0 arguments; docstrings fetched from -main :doc metadata and *command-line-args* clojure global reference.
+- 0 arguments; docstrings fetched from -main :doc metadata and *command-line-args* clojure's global reference.
 - 1 argument = docstring
 - 2 arguments = docstring arguments list
 
-This project is still under development, thus a clojar is sadly not yet available. Please be patient.
+Sadly a clojar is not yet available. Please be patient.
 
 No arguments, just let the magic beging !
 
