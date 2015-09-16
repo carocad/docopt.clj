@@ -1,6 +1,6 @@
 # docopt.cluno
 ![version](https://img.shields.io/badge/version-0.1-blue.svg)
-[![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg?style=plastic)](https://raw.githubusercontent.com/carocad/docopt.clj/master/LICENSE)
+[![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg?style=plastic)](https://github.com/carocad/docopt.cluno/blob/master/LICENSE)
 
 Creates beautiful command-line interfaces using only your docstring. After all, a good help message has all necessary information in it to make a parser
 
