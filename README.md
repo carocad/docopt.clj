@@ -46,7 +46,7 @@ Options:
 ## Tests
 Run `lein test` to validate all tests.
 
-# Notes
+## Notes
 This project does NOT yet cover all of the original docopt Python implementation. Some of them are yet to be implemented and some are not going to be implemented at all due to a difference of opinion in the ambiguities that the docopt language should accept.
 
 Pull request and are more than welcome :)
