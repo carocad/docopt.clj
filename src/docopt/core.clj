@@ -5,10 +5,8 @@
 ;TODO accept dot (.) as a valid character in the option description
 ;TODO accept parenthesis () as a valid characters in the option description. EX (anchored)
 
-(def ^:private grammar-parser
-  "Docopt language grammar specification"
-  (insta/parser
-   "<DOCSTRING> = [<DESCRIPTION>] USAGE [OPTIONS]
+(def ^:private docopt-language-grammar
+  "<DOCSTRING> = [<DESCRIPTION>] USAGE [OPTIONS]
     DESCRIPTION = #'(?si).*?(?:(?!usage).)*'
     USAGE = <#'(?i)usage:\\s+'> usage-line {usage-line}
     OPTIONS = <#'(?i)options:\\s+'> option-line {option-line}
@@ -38,27 +36,37 @@
     OR = '|'
 
    <word> = #'\\w+'               (* two or more letters are a word*)
-   <EOL> = #'(\\n|\\r)+|$'"
-   :auto-whitespace (insta/parser "whitespace = #'( |\\t)+'")))
+   <EOL> = #'(\\n|\\r)+|$'")
+
+(def ^:private matcher
+  {:full-option #(str "<'" %1 "'|'" %2 "'> #'\\S+'")
+   :both-option #(str "'" %1 "'|'" %2 "'")
+   :opt+arg     #(str "<'" % "'> #'\\S+'")
+   :opt         identity
+   :argument    #(str "\\S+")
+   :command     #(str %)
+   :refer-to    #(keyword %)})
 
 (defn- tag-match?
-  [element & tags]
-  ((first element) (into (hash-set) tags)))
+  [element tags]
+  ((first element) (apply hash-set tags)))
 
+;TO-THINK: if I'm sure that there is a short option, why don't replace it inmediately as a combinator?
 (defn- make-option
   "create a hash-map of name-instaparse.combinator based on the different kind of long/short options and if
   an option accepts arguments."
-  [option-hash]
-  (let [{:keys [short-option long-option option-arg]} option-hash]
+  [{:keys [short-option long-option option-arg]}]
+  (let [short-key (keyword short-option)
+        long-key  (keyword long-option)]
     (cond
-     (and long-option short-option option-arg) (hash-map (keyword long-option)  (combi/ebnf (str "<'" long-option "'|'" short-option "'> #'\\S+'"))
-                                                         (keyword short-option) (keyword long-option))
-     (and long-option short-option)            (hash-map (keyword long-option)  (combi/ebnf (str "'" long-option "'|'" short-option "'"))
-                                                         (keyword short-option) (keyword long-option))
-     (and long-option option-arg)              (hash-map (keyword long-option)  (combi/ebnf (str "<'" long-option "'> #'\\S+'")))
-     (and short-option option-arg)             (hash-map (keyword short-option) (combi/ebnf (str "<'" short-option "'> #'\\S+'" )))
-     long-option                               (hash-map (keyword long-option)  (combi/string long-option))
-     short-option                              (hash-map (keyword short-option) (combi/string short-option)))))
+     (and long-option short-option option-arg) (hash-map long-key  (combi/ebnf ((matcher :full-option) long-option short-option))
+                                                         short-key ((matcher :refer-to) long-option))
+     (and long-option short-option)            (hash-map long-key  (combi/ebnf ((matcher :both-option) long-option short-option))
+                                                         short-key ((matcher :refer-to) long-option))
+     (and long-option option-arg)              (hash-map long-key  (combi/ebnf ((matcher :opt+arg) long-option)))
+     (and short-option option-arg)             (hash-map short-key (combi/ebnf ((matcher :opt+arg) short-option)))
+     long-option                               (hash-map long-key  (combi/string ((matcher :opt) long-option)))
+     short-option                              (hash-map short-key (combi/string ((matcher :opt+arg) short-option))))))
 
 (defn- make-element
   [content]
@@ -68,16 +76,21 @@
   [content]
   {(keyword content) (combi/regexp "\\S+")})
 
-(defn- get-elements
+(defn- fetch-elements
+  "traverse the usage-tree, extract the interesting tags and group them by tag name"
+  [usage-tree & target-tag]
+  (->> (tree-seq vector? identity usage-tree)
+       (filter #(and (vector? %) (tag-match? % target-tag)))
+       (group-by #(first %))))
+
+(defn- elements-combinators
   "based on the parsed usage and options section, get the commands, arguments
   and options. Each element is transformed into a key-value pair with the key
   its name (<one> --two -t ...), each value is the corresponding
   instaparse.combinators to be matched against."
   [usage-tree options-tree]
    (let [option-lines  (map rest (rest options-tree))
-         elements      (->> (tree-seq vector? identity usage-tree)
-                            (filter #(and (vector? %) (not (tag-match? % :USAGE :usage-line :multiple :exclusive :required :optional))))
-                            (group-by #(first %)))
+         elements      (fetch-elements usage-tree :name :command :argument)
          fetch-all     (fn [tag] (into (hash-set) (map second (tag elements))))
          names         (fetch-all :name) ; TODO: check that only one element is here
          commands      (map make-element (fetch-all :command))
@@ -96,7 +109,7 @@
      {:command         #(combi/nt (keyword %))
       :argument        #(combi/nt (keyword %))
       :short-option    #(combi/nt ((keyword %) short->long-option))
-      :long-option     (fn [& args] (combi/nt (keyword (first args)))) ; FIX ME: dont ignore the positional argument
+      :long-option     (fn [& args] (combi/nt (keyword (first args))))
       :multiple        #(combi/plus %)
       :required        #(combi/cat %) ; LATER: does this really work?
       :optional        #(combi/opt %)
@@ -114,8 +127,10 @@
 (defn- argument-grammar
   "Creates a grammar specification hash-map for instaparse/parser to work with."
   [docstring]
-  (let [grammar-tree         (grammar-parser docstring)
-        all-elements         (get-elements (first grammar-tree) (second grammar-tree))
+  (let [docopt-parser        (insta/parser docopt-language-grammar
+                                           :auto-whitespace (insta/parser "whitespace = #'( |\\t)+'"))
+        grammar-tree         (docopt-parser docstring)
+        all-elements         (elements-combinators (first grammar-tree) (second grammar-tree))
         main-elements        (into {} (filter #(not (keyword? (second %))) (seq all-elements)))
         short->long-option   (into {} (filter #(keyword? (second %)) (seq all-elements)))]
     ;(insta/transform {:USAGE #(into (hash-map) %&)}
