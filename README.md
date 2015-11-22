@@ -8,15 +8,10 @@ Creates beautiful command-line interfaces using only your docstring. After all, 
 Clojure (unnoficial) implementation of the [docopt](http://docopt.org/) language,
 
 ## Usage
-Require docopt in your namespace header:
-```
-(ns example.core
-  (:require [docopt.core :refer [docopt]]))
-```
-Docopt.cluno exposes a single function in docopt.core called "docopt". You can call it with:
+docopt exposes a single function in docopt.core called "docopt". You can call it with:
 - 0 arguments; docstrings fetched from -main :doc metadata and *command-line-args* clojure's dynamic var.
 - 1 argument = docstring
-- 2 arguments = docstring argument-list
+- 2 arguments = docstring, argument-list
 
 No arguments, just let the magic beging !!
 
