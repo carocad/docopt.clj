@@ -1,20 +1,19 @@
 # docopt.cluno
-![version](https://img.shields.io/badge/version-0.1-blue.svg)
-[![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg?style=plastic)](https://raw.githubusercontent.com/carocad/docopt.clj/master/LICENSE)
+[![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg?style=plastic)](https://github.com/carocad/docopt.cluno/blob/master/LICENSE)
+
+[![Clojars Project](http://clojars.org/org.clojars.carocad/docopt/latest-version.svg)](http://clojars.org/org.clojars.carocad/docopt)
 
 Creates beautiful command-line interfaces using only your docstring. After all, a good help message has all necessary information in it to make a parser
 
 Clojure (unnoficial) implementation of the [docopt](http://docopt.org/) language,
 
 ## Usage
-Docopt.cluno exposes a single function in docopt.core called "docopt". You can call it with:
-- 0 arguments; docstrings fetched from -main :doc metadata and *command-line-args* clojure global reference.
+docopt exposes a single function in docopt.core called "docopt". You can call it with:
+- 0 arguments; docstrings fetched from -main :doc metadata and *command-line-args* clojure's dynamic var.
 - 1 argument = docstring
-- 2 arguments = docstring arguments list
+- 2 arguments = docstring, argument-list
 
-This project is still under development, thus a clojar is sadly not yet available. Please be patient.
-
-No arguments, just let the magic beging !
+No arguments, just let the magic beging !!
 
 ``` clojure
 (ns example.core
@@ -46,9 +45,9 @@ Options:
 ## Tests
 Run `lein test` to validate all tests.
 
-# Notes
+## Notes
 This project does NOT yet cover all of the original docopt Python implementation. Some of them are yet to be implemented and some are not going to be implemented at all due to a difference of opinion in the ambiguities that the docopt language should accept.
 
 Pull request and are more than welcome :)
 
-copyright Camilo Roca
+Copyright (c) 2015 Camilo Roca
