@@ -1,17 +1,14 @@
 # docopt.cluno
-![version](https://img.shields.io/badge/version-0.1-blue.svg)
 [![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg?style=plastic)](https://github.com/carocad/docopt.cluno/blob/master/LICENSE)
+
+[![Clojars Project](http://clojars.org/org.clojars.carocad/docopt/latest-version.svg)](http://clojars.org/org.clojars.carocad/docopt)
 
 Creates beautiful command-line interfaces using only your docstring. After all, a good help message has all necessary information in it to make a parser
 
 Clojure (unnoficial) implementation of the [docopt](http://docopt.org/) language,
 
 ## Usage
-Add the following line to your leiningen dependencies:
-```
-[org.clojars.carocad/docopt "0.1.0"]
-```
-Require instaparse in your namespace header:
+Require docopt in your namespace header:
 ```
 (ns example.core
   (:require [docopt.core :refer [docopt]]))
