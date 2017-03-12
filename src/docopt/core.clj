@@ -1,4 +1,5 @@
 (ns docopt.core
+  (:gen-class)
   (:require [instaparse.core :as insta])
   (:require [instaparse.combinators :as combi]))
 
@@ -155,3 +156,26 @@
          arg-parser  (insta/parser arg-tree :start :USAGE :auto-whitespace :standard)
          parsed-argv (arg-parser (clojure.string/join " " args))]
      (insta/transform {:USAGE #(into (hash-map) %&)}  parsed-argv))))
+
+
+(defn -main
+  "Naval Fate.
+
+Usage:
+  naval_fate ship new <name>...
+  naval_fate ship <name> move <x> <y> [--speed=<kn>]
+  naval_fate ship shoot <x> <y>
+  naval_fate mine (set|remove) <x> <y> [--moored|--drifting]
+  naval_fate -h | --help
+  naval_fate --version
+
+Options:
+  -h --help     Show this screen.
+  --version     Show version.
+  --speed=<kn>  Speed in knots [default: 10].
+  --moored      Moored mine
+  --drifting    Drifting mine"
+
+  [& args]
+  (let [arguments (docopt)]
+    (println arguments))) ; with only one argument, docopt parses -main's docstring.
