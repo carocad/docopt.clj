@@ -1,0 +1,1 @@
+(ns docopt.unit-tests)
