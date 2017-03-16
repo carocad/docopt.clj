@@ -1,4 +1,4 @@
-# docopt.cluno
+# docopt.clj
 [![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg?style=plastic)](https://github.com/carocad/docopt.cluno/blob/master/LICENSE)
 
 [![Clojars Project](http://clojars.org/org.clojars.carocad/docopt/latest-version.svg)](http://clojars.org/org.clojars.carocad/docopt)
