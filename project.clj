@@ -4,5 +4,4 @@
   :license {:name "MIT"
             :url "https://github.com/carocad/docopt.clj/blob/master/LICENSE"}
   :dependencies [[org.clojure/clojure "1.9.0-alpha15"]
-                 [instaparse "1.4.1"]]
-  :profiles {:test {:dependencies [[org.clojure/data.json "0.2.1"]]}})
+                 [instaparse "1.4.1"]])
