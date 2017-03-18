@@ -4,8 +4,7 @@
             [instaparse.combinators-source :as combi]
             [instaparse.cfg :as cfg]
             [instaparse.abnf :as abnf]
-            [clojure.string :as str]
-            [clojure.zip :as zip]))
+            [clojure.string :as str]))
 
 (def docopt-parser (insta/parser "
   <DOCSTRING> = <DESCRIPTION?> USAGE OPTIONS?
@@ -155,8 +154,8 @@
         ks      (into #{} (map first all))
         cleaned (into {} (remove (comp tags first) (rest result)))]
     (into cleaned
-          (for [k ks]
-            [k (sequence (comp (filter (comp #{k} first)) (map second)) all)]))))
+      (for [k ks]
+        [k (sequence (comp (filter (comp #{k} first)) (map second)) all)]))))
 
 (defn parse
   "Parses a docstring, generates a custom parser for the specific cli options
