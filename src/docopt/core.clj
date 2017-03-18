@@ -4,11 +4,12 @@
             [instaparse.combinators-source :as combi]
             [instaparse.cfg :as cfg]
             [instaparse.abnf :as abnf]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [clojure.zip :as zip]))
 
 (def docopt-parser (insta/parser "
   <DOCSTRING> = <DESCRIPTION?> USAGE OPTIONS?
-  DESCRIPTION = !USAGE #'(?si).*?' <EOL> (* anything except the usage section*)
+  DESCRIPTION = !USAGE #'^(?si)(.*?)(?=usage:)'
 
   usage-begin = <#'(?i)usage:'> <EOL>
   usage-line = !OPTIONS app-name expression+ <EOL | #'$'>
@@ -32,8 +33,8 @@
   option-key = #'-[a-zA-Z]'
   option-name = #'--[a-zA-Z]{2,}'     (* two or more characters required for option names *)
   option-arg = #'(=| )(<[a-z_]+>|[A-Z_]+)'
-  option-desc = !(short-option | long-option) #'\\w+'+
-  option-default = <'[default:'> #'\\w+' <']'>
+  option-desc = !(short-option | long-option) #'[\\w\\.\\(\\)]+'+
+  option-default = <'[default:'> #'\\w+' <']'> <'.'>?
   short-option = option-key option-arg?
   long-option = option-name option-arg?
 
@@ -48,21 +49,23 @@
   instaparse.combinators. The complete Usage section is converted into an flat
   alternation (use1 | use2 | ...) based on each usage line."
   [usage]
-  (let [sentinel (fn [& args] nil)]
-    (into {} (remove nil?)
-      (t/transform
-        {:command     (fn [name] [(keyword name) (combi/string name)])
-         :argument    (fn [name] [(keyword name) (combi/regexp "\\S+")])
-         :option-key  keyword
-         :option-name keyword
-         :multiple    sentinel
-         :required    sentinel
-         :optional    sentinel
-         :exclusive   sentinel
-         ; drop the name of the program
-         :usage-line  (fn [& v] (rest v))
-         :USAGE       (fn [& v] (apply concat v))}
-        usage))))
+  (let [sentinel (fn [& args] nil)
+        inner    (fn [& v] v)
+        tuse
+        (t/transform
+          {:command     (fn [name] [(keyword name) (combi/string name)])
+           :argument    (fn [name] [(keyword name) (combi/regexp "\\S+")])
+           :option-key  sentinel
+           :option-name sentinel
+           :multiple    inner
+           :required    inner
+           :optional    inner
+           :exclusive   inner
+           ; drop the name of the program
+           :usage-line  (fn [& v] (flatten (rest v)))
+           :USAGE       (fn [& v] (apply concat v))}
+          usage)]
+    (apply hash-map (remove nil? tuse))))
 
 (defn- optionize
   ([name]
@@ -72,7 +75,7 @@
     (combi/cat (combi/hide (combi/regexp (str name "[=:]")))
                (combi/regexp "\\S+"))]))
 
-(defn opt-combi
+(defn- opt-combi
   [& elements]
   (let [rel (remove nil? elements)]
     (if (= 1 (count rel)) [(apply hash-map (first rel))] ;; 2 = long and short option
@@ -88,7 +91,7 @@
   (t/transform
     {:option-name    identity
      :option-key     identity
-     :option-default #{} ;; TODO how to do this
+     :option-default #{} ;; TODO handle default values properly
      :option-arg     #(subs % 1)
      :short-option   optionize
      :long-option    optionize
@@ -120,21 +123,81 @@
                         (assoc use-cases :USAGE content)))};; add the start rule
       usage)))
 
+(defn- manifold
+  [usage]
+  (t/transform
+    {:command     identity
+     :argument    identity
+     :option-key  identity
+     :option-name identity
+     :multiple    (fn [& v] [:multiple v])
+     :required    (fn [& v] v)
+     :optional    identity
+     :exclusive   (fn [& v] v)
+     ; drop the name of the program
+     :usage-line  (fn [& v] (rest v))
+     :USAGE       (fn [& v] (apply concat v))}
+    usage))
+
+(defn- multiple-nt
+  [usage]
+  (let [reorg (manifold usage)
+        mulel (sequence (comp (filter vector?)
+                              (filter #(= :multiple (first %)))
+                              (map rest))
+                reorg)
+        eles  (flatten mulel)]
+    (into #{} (map keyword) eles)))
+
+(defn- combine
+  [result tags]
+  (let [all     (filter (comp tags first) (rest result))
+        ks      (into #{} (map first all))
+        cleaned (into {} (remove (comp tags first) (rest result)))]
+    (into cleaned
+          (for [k ks]
+            [k (sequence (comp (filter (comp #{k} first)) (map second)) all)]))))
+
 (defn parse
   "Parses a docstring, generates a custom parser for the specific cli options
    and returns a map of {element value} where element is one of option-name,
    command or positional-argument. Repeatable arguments are put into a vector"
   [docstring args]
-  (let [[usage options :as grammar-tree] (docopt-parser docstring)]
+  (let [grammar-tree (docopt-parser docstring)]
     (if (insta/failure? grammar-tree) grammar-tree
-      (let [refs            (non-terminal usage)
+      (let [[usage options] grammar-tree
+            refs            (non-terminal usage)
             use-laws        (usage-rules usage)
             opt-laws        (options-rules options)
             cli-parser      (insta/parser (merge refs use-laws opt-laws)
                               :start :USAGE :auto-whitespace :standard)
             result          (cli-parser (str/join " " args))]
         (if (insta/failure? result) result
-          (t/transform {:USAGE #(into (hash-map) %&)} result))))))
+          (combine result (multiple-nt usage))))))) ;(t/transform {:USAGE #(into (hash-map) %&)} result))))))
+
+(defn -main
+ "Naval Fate.
+
+  Usage:
+  naval_fate.py ship new <name>...
+  naval_fate.py ship <name> move <x> <y> [--speed]
+  naval_fate.py ship shoot <x> <y>
+  naval_fate.py mine (set|remove) <x> <y> [--moored | --drifting]
+  naval_fate.py (-h | --help)
+  naval_fate.py --version
+
+  Options:
+  -h --help     Show this screen.
+  --version     Show version.
+  --speed=<kn>  Speed in knots [default: 10].
+  --moored      Moored (anchored) mine.
+  --drifting    Drifting mine."
+  [args]
+  (parse (:doc (meta #'-main)) args))
+
+(-main ["ship" "Guardian" "move" "10" "50" "--speed=20"])
+
+
 
 (def foo
   "Usage:
@@ -145,22 +208,24 @@
      -o --OUT                 out directory
      --count N                number of operations")
 
-(def bar "
-  Usage:
-    quick_example.py tcp <host> <port> [--timeout]
+(def bar
+  "Usage:
+    quick_example.py tcp <host> <port> [--timeout] [--foo]...
     quick_example.py serial <port> [--baud] [--timeout]
     quick_example.py -h | --help | --version
 
   Options:
      --timeout=<value>  input file[default:1200]
+     --foo <bar>        baz
      --baud DB          out directory
      -h --help          number of operations
      --version          version")
 
-(def baz (merge (non-terminal (first (insta/parse docopt-parser bar)))
-                (usage-rules (first (insta/parse docopt-parser bar)))
-                (options-rules (second (insta/parse docopt-parser bar)))))
+;(def baz (merge (non-terminal (first (insta/parse docopt-parser bar)))
+;                (usage-rules (first (insta/parse docopt-parser bar)))
+;                (options-rules (second (insta/parse docopt-parser bar)))))
 
 (parse bar
-  ["tcp" "localhost" "20" "--timeout:3200"])
-  ;"-h")
+       ["tcp" "localhost" "20" "--timeout:3200" "--foo=" "2" "--foo=" "3"])
+;["-h"]
+;["--version"])
