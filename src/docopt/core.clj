@@ -11,7 +11,7 @@
   DESCRIPTION = !USAGE #'^(?si)(.*?)(?=usage:)'
 
   usage-begin = <#'(?i)usage:'> <EOL>
-  usage-line = !OPTIONS app-name expression+ <EOL | #'$'>
+  usage-line = !OPTIONS app-name expression* <EOL | #'$'>
   USAGE = <usage-begin> usage-line+
 
   options-begin = <#'(?i)options:'> <EOL>
@@ -53,7 +53,7 @@
         tuse
         (t/transform
           {:command     (fn [name] [(keyword name) (combi/string name)])
-           :argument    (fn [name] [(keyword name) (combi/regexp "\\S+")])
+           :argument    (fn [name] [(keyword name) (combi/regexp "\\w+")])
            :option-key  sentinel
            :option-name sentinel
            :multiple    inner
@@ -144,7 +144,7 @@
         mulel (sequence (comp (filter vector?)
                               (filter #(= :multiple (first %)))
                               (map rest))
-                reorg)
+                (tree-seq sequential? identity reorg))
         eles  (flatten mulel)]
     (into #{} (map keyword) eles)))
 
@@ -167,62 +167,13 @@
       (let [[usage options] grammar-tree
             refs            (non-terminal usage)
             use-laws        (usage-rules usage)
-            opt-laws        (options-rules options)
+            opt-laws        (options-rules (or options []))
             cli-parser      (insta/parser (merge refs use-laws opt-laws)
                               :start :USAGE :auto-whitespace :standard)
             result          (cli-parser (str/join " " args))]
         (if (insta/failure? result) result
           (combine result (multiple-nt usage))))))) ;(t/transform {:USAGE #(into (hash-map) %&)} result))))))
 
-(defn -main
- "Naval Fate.
-
-  Usage:
-  naval_fate.py ship new <name>...
-  naval_fate.py ship <name> move <x> <y> [--speed]
-  naval_fate.py ship shoot <x> <y>
-  naval_fate.py mine (set|remove) <x> <y> [--moored | --drifting]
-  naval_fate.py (-h | --help)
-  naval_fate.py --version
-
-  Options:
-  -h --help     Show this screen.
-  --version     Show version.
-  --speed=<kn>  Speed in knots [default: 10].
-  --moored      Moored (anchored) mine.
-  --drifting    Drifting mine."
-  [args]
-  (parse (:doc (meta #'-main)) args))
-
-(-main ["ship" "Guardian" "move" "10" "50" "--speed=20"])
-
-;(def foo
-;  "Usage:
-;    prog.py [--count] --OUT --FILE...
-;
-;    Options:
-;     -f <path> --FILE=<path>  input file[default:foo]
-;     -o --OUT                 out directory
-;     --count N                number of operations")
-
-;(def bar
-;  "Usage:
-;    quick_example.py tcp <host> <port> [--timeout] [--foo]...
-;    quick_example.py serial <port> [--baud] [--timeout]
-;    quick_example.py -h | --help | --version
-;
-;  Options:
-;     --timeout=<value>  input file[default:1200]
-;     --foo <bar>        baz
-;     --baud DB          out directory
-;     -h --help          number of operations
-;     --version          version")
-
 ;(def baz (merge (non-terminal (first (insta/parse docopt-parser bar)))
 ;                (usage-rules (first (insta/parse docopt-parser bar)))
 ;                (options-rules (second (insta/parse docopt-parser bar)))))
-
-;(parse bar
-;       ["tcp" "localhost" "20" "--timeout:3200" "--foo=" "2" "--foo=" "3"])
-;["-h"]
-;["--version"])

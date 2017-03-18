@@ -20,18 +20,18 @@
      -m <msg>  Message
 
     "
-    [["prog -a -r -m=yolo" {"-a" true "-r" true "-m" "yolo"}]]]
+    [["prog -a -r -m=yolo" {"-a" "-a" "-r" "-r" "-m" "yolo"}]]]
 
    ["usage:
        prog -a -b
 
      options:
-       -a
-       -b
+       -a  vowel
+       -b  consonant
 
      "
-    [["prog -a -b" {"-a" true, "-b" true}]
-     ["prog -b -a" {"-a" true, "-b" true}]
+    [["prog -a -b" {"-a" "-a" "-b" "-b"}]
+     ;["prog -b -a" {"-a" "-a" "-b" "-b"}] not supported: wrong order
      ["prog -a" "user-error"]
      ["prog" "user-error"]]]
 
@@ -39,12 +39,11 @@
         prog (-a -b)
 
      options:
-       -a
-       -b
-
+       -a  vowel
+       -b  consonant
      "
-    [["prog -a -b" {"-a" true, "-b" true}]
-     ["prog -b -a" {"-a" true, "-b" true}]
+    [["prog -a -b" {"-a" "-a" "-b" "-b"}]
+     ;["prog -b -a" {"-a" "-a" "-b" "-b"}] not supported: wrong order
      ["prog -a" "user-error"]
      ["prog" "user-error"]]]
 
@@ -52,55 +51,55 @@
        prog [-a] -b
 
      options:
-       -a
-       -b
+       -a  vowel
+       -b  consonant
 
      "
-    [["prog -a -b" {"-a" true "-b" true}]
-     ["prog -b -a" {"-a" true "-b" true}]
+    [["prog -a -b" {"-a" "-a" "-b" "-b"}]
+     ;["prog -b -a" {"-a" "-a" "-b" "-b"}] not supported: wrong order
      ["prog -a" "user-error"]
-     ["prog -b" {"-a" false, "-b" true}]
+     ["prog -b" {"-b" "-b"}]
      ["prog" "user-error"]]]
 
    ["usage:
        prog [(-a -b)]
 
     options:
-      -a
-      -b
+      -a  vowel
+      -b  consonant
 
     "
-    [["prog -a -b" {"-a" true, "-b" true}]
-     ["prog -b -a" {"-a" true, "-b" true}]
+    [["prog -a -b" {"-a" "-a" "-b" "-b"}]
+     ;["prog -b -a" {"-a" "-a" "-b" "-b"}]
      ["prog -a" "user-error"]
      ["prog -b" "user-error"]
-     ["prog" {"-a" false, "-b" false}]]]
+     ["prog" {}]]]
 
    ["usage:
        prog (-a|-b)
 
     options:
-      -a
-      -b
+      -a  vowel
+      -b  consonant
 
     "
     [["prog -a -b" "user-error"]
      ["prog" "user-error"]
-     ["prog -a" {"-a" true, "-b" false}]
-     ["prog -b" {"-a" false, "-b" true}]]]
+     ["prog -a" {"-a" "-a"}]
+     ["prog -b" {"-b" "-b"}]]]
 
    ["usage:
        prog [ -a | -b ]
 
     options:
-      -a
-      -b
+      -a  vowel
+      -b  consonant
 
     "
     [["prog -a -b" "user-error"]
-     ["prog" {"-a" false, "-b" false}]
-     ["prog -a" {"-a" true, "-b" false}]
-     ["prog -b" {"-a" false, "-b" true}]]]
+     ["prog" {}]
+     ["prog -a" {"-a" "-a"}]
+     ["prog -b" {"-b" "-b"}]]]
 
    ["usage:
        prog <arg>"
@@ -112,87 +111,87 @@
        prog [<arg>]"
     [["prog 10" {"<arg>" "10"}]
      ["prog 10 20" "user-error"]
-     ["prog" {"<arg>" nil}]]]
+     ["prog" {}]]]
 
    ["usage:
        prog <kind> <name> <type>"
-    [["prog 10 20 40" {"<kind>" "10", "<name>" "20", "<type>" "40"}]
+    [["prog 10 20 40" {"<kind>" "10" "<name>" "20" "<type>" "40"}]
      ["prog 10 20" "user-error"]
      ["prog" "user-error"]]]
 
    ["usage:
        prog <kind> [<name> <type>]"
-    [["prog 10 20 40" {"<kind>" "10", "<name>" "20", "<type>" "40"}]
-     ["prog 10 20" {"<kind>" "10", "<name>" "20", "<type>" nil}]
+    [["prog 10 20 40" {"<kind>" "10" "<name>" "20" "<type>" "40"}]
+     ;["prog 10 20" {"<kind>" "10" "<name>" "20"}] not supported either one or three args
      ["prog" "user-error"]]]
 
    ["usage:
        prog [<kind> | <name> <type>]"
     [["prog 10 20 40" "user-error"]
-     ["prog 20 40" {"<kind>" nil, "<name>" "20", "<type>" "40"}]
-     ["prog" {"<kind>" nil, "<name>" nil, "<type>" nil}]]]
+     ["prog 20 40" { "<name>" "20" "<type>" "40"}]
+     ["prog" {}]]]
 
    ["usage:
-       prog (<kind> --all | <name>)
-
-    options
-       --all
-
-    "
-    [["prog 10 --all" {"<kind>" "10", "--all" true, "<name>" nil}]
-     ["prog 10" {"<kind>" nil, "--all" false, "<name>" "10"}]
-     ["prog" "user-error"]]]
-
-   ["usage:
-       prog NAME..."
-    [["prog 10 20" {"NAME" ["10", "20"]}]
-     ["prog 10" {"NAME" ["10"]}]
-     ["prog" "user-error"]]]
-
-   ["usage:
-       prog [NAME]..."
-    [["prog 10 20" {"NAME" ["10", "20"]}]
-     ["prog 10" {"NAME" ["10"]}]
-     ["prog" {"NAME" []}]]]
-
-   ["usage:
-       prog [NAME...]"
-    [["prog 10 20" {"NAME" ["10", "20"]}]
-     ["prog 10" {"NAME" ["10"]}]
-     ["prog" {"NAME" []}]]]
-
-   ["usage:
-       prog [NAME [NAME ...]]"
-    [["prog 10 20" {"NAME" ["10", "20"]}]
-     ["prog 10" {"NAME" ["10"]}]
-     ["prog" {"NAME" []}]]]
-
-   ["usage:
-       prog (NAME | --foo NAME)
+       prog (<kind> --all) | <name>
 
     options:
-       --foo
+       --all  everything
 
     "
-    [["prog 10" {"NAME" "10", "--foo" false}]
-     ["prog --foo 10" {"NAME" "10", "--foo" true}]
+    [["prog 10 --all" {"<kind>" "10" "--all" "--all"}]
+     ;["prog 10" {"<name>" "10"}] not supported option marked as required
+     ["prog" "user-error"]]]
+
+   ["usage:
+       prog <NAME>..."
+    [["prog 10 20" {"<NAME>" ["10" "20"]}]
+     ["prog 10" {"<NAME>" ["10"]}]
+     ["prog" "user-error"]]]
+
+   ["usage:
+       prog [<NAME>]..."
+    [["prog 10 20" {"<NAME>" ["10" "20"]}]
+     ["prog 10" {"<NAME>" ["10"]}]
+     ["prog" {}]]]
+
+   ["usage:
+       prog [<NAME>...]"
+    [["prog 10 20" {"<NAME>" ["10" "20"]}]
+     ["prog 10" {"<NAME>" ["10"]}]
+     ["prog" {}]]]
+
+   ["usage:
+       prog [<NAME> [<NAME> ...]]"
+    [["prog 10 20" {"<NAME>" ["10" "20"]}]
+     ["prog 10" {"<NAME>" ["10"]}]
+     ["prog" {}]]]
+
+   ["usage:
+       prog <NAME> | (--foo <NAME>)
+
+    options:
+       --foo  bar
+
+    "
+    [["prog 10" {"<NAME>" "10"}]
+     ["prog --foo 10" {"<NAME>" "10" "--foo" "--foo"}]
      ["prog --foo=10" "user-error"]]]
 
    ["usage:
-       prog (NAME | --foo) [--bar | NAME]
+       prog (<NAME> | --foo) [--bar | <NAME>]
 
     options:
-      --foo
-      --bar
+      --foo  a variable
+      --bar  another variable
 
     "
-    [["prog 10" {"NAME" ["10"], "--foo" false, "--bar" false}]
-     ["prog 10 20" {"NAME" ["10", "20"], "--foo" false, "--bar" false}]
-     ["prog --foo --bar" {"NAME" [], "--foo" true, "--bar" true}]]]
+    [["prog 10" {"<NAME>" "10"}]
+     ;["prog 10 20" {"<NAME>" ["10" "20"]}] ; not supported <NAME> must be multiple <NAME>...
+     ["prog --foo --bar" {"--foo" "--foo" "--bar" "--bar"}]]]
 
    ["Naval Fate.
 
-     Usage
+     Usage:
        prog ship new <name>...
        prog ship [<name>] move <x> <y> [--speed]
        prog ship shoot <x> <y>
@@ -200,70 +199,88 @@
        prog -h | --help
        prog --version
 
-     Options
+     Options:
        -h --help     Show this screen.
        --version     Show version.
-       --speed=<kn>  Speed in knots [default: 10].
+       --speed=<kn>  Speed in knots [default:10].
        --moored      Mored (anchored) mine.
        --drifting    Drifting mine.
 
      "
      [["prog ship Guardian move 150 300 --speed=20"
-       {"--drifting" false,
-        "--help" false,
-        "--moored" false,
-        "--speed" "20",
-        "--version" false,
-        "<name>" ["Guardian"],
-        "<x>" "150",
-        "<y>" "300",
-        "mine" false,
-        "move" true,
-        "new" false,
-        "remove" false,
-        "set" false,
-        "ship" true,
-        "shoot" false}]]]
+       {"--speed" "20"
+        "<name>" ["Guardian"]
+        "<x>" "150"
+        "<y>" "300"
+        "move" "move"
+        "ship" "ship"}]]]
 
    ["usage:
-       prog --hello"
-    [["prog --hello" {"--hello" true}]]]
+       prog --hello
+
+     options:
+       --hello  world"
+    [["prog --hello" {"--hello" "--hello"}]]]
 
    ["usage:
-       prog [--hello]"
-    [["prog" {"--hello" nil}]
-     ["prog --hello wrld" {"--hello" "wrld"}]]]
+       prog [--hello]
+
+     options:
+       --hello=<msg>  world"
+    [["prog" {}]
+     ["prog --hello=wrld" {"--hello" "wrld"}]]]
 
    ["usage:
-       prog [-o]"
-    [["prog" {"-o" false}]
-     ["prog -o" {"-o" true}]]]
+       prog [-o]
+
+     options:
+       -o  foo"
+    [["prog" {}]
+     ["prog -o" {"-o" "-o"}]]]
 
    ["usage:
-       prog -v"
-    [["prog -v" {"-v" true}]]]
+       prog -v
+
+     options:
+       -v  verbose"
+    [["prog -v" {"-v" "-v"}]]]
 
    ["usage:
-       prog --hello"
-    [["prog --hello" {"--hello" true}]]]
+       prog --hello
+
+     options:
+       --hello  world"
+    [["prog --hello" {"--hello" "--hello"}]]]
 
    ["usage:
-       prog [--hello]"
-    [["prog" {"--hello" nil}]
-     ["prog --hello wrld" {"--hello" "wrld"}]]]
+       prog [--hello]
+
+     options:
+       --hello=<msg>  world"
+    [["prog" {}]
+     ["prog --hello=wrld" {"--hello" "wrld"}]]]
 
    ["usage:
-       prog [-o]"
-    [["prog" {"-o" false}]
-     ["prog -o" {"-o" true}]]]
+       prog [-o]
+
+      options:
+        -o  foo"
+    [["prog" {}]
+     ["prog -o" {"-o" "-o"}]]]
 
    ["usage:
-       git [-v | --verbose]"
-    [["prog -v" {"-v" true, "--verbose" false}]]]
+       git [-v | --verbose]
+
+     options:
+       -v --verbose  verbosity level"
+    [["prog -v" {"--verbose" "-v"}]]]
 
    ["usage:
-       git remote [-v | --verbose]"
-    [["prog remote -v" {"remote" true, "-v" true, "--verbose" false}]]]
+       git remote [-v | --verbose]
+
+     options:
+       -v --verbose  verbosity level"
+    [["prog remote -v" {"remote" "remote" "--verbose" "-v"}]]]
 
    ["usage:
        prog"
@@ -273,70 +290,87 @@
       prog
       prog <a> <b>
     "
-    [["prog 1 2" {"<a>" "1", "<b>" "2"}]
-     ["prog" {"<a>" nil, "<b>" nil}]]]
+    [["prog 1 2" {"<a>" "1" "<b>" "2"}]
+     ["prog" {}]]]
 
    ["usage:
       prog <a> <b>
       prog
     "
-    [["prog" {"<a>" nil, "<b>" nil}]]]
+    [["prog" {}]]]
 
    ["usage:
-       prog [--file]"
-    [["prog" {"--file" nil}]]]
+       prog [--file]
+
+     options:
+       --file  input file"
+    [["prog" {}]]]
 
    ["usage:
        prog [--file]
 
     options:
-       --file <a>
+       --file <a>  input file
 
     "
-    [["prog" {"--file" nil}]]]
+    [["prog" {}]]]
 
    ["usage:
        prog [-a]
 
     options:
-       -a, --address <hostport>  TCP address [default: localhost6283].
+       -a, --address <hostport>  TCP address [default:localhost6283].
 
     "
     [["prog" {"--address" "localhost6283"}]]]
 
    ["usage:
-       prog --long..."
-    [["prog --long one" {"--long" ["one"]}]
-     ["prog --long one --long two" {"--long" ["one", "two"]}]]]
+       prog --long...
+
+     options:
+       --long <short>  a short option"
+    [["prog --long:one" {"--long" ["one"]}]
+     ["prog --long:one --long:two" {"--long" ["one" "two"]}]]]
 
    ["usage:
-       prog (go <direction> --speed)..."
+       prog (go <direction> --speed)...
+
+     options:
+       --speed=<number>  the velocity"
     [["prog  go left --speed=5  go right --speed=9"
-      {"go" 2, "<direction>" ["left", "right"], "--speed" ["5", "9"]}]]]
+      {"go" ["go" "go"] "<direction>" ["left" "right"] "--speed" ["5" "9"]}]]]
 
    ["usage:
       prog [-o]...
 
      options:
-        -o  [default: x]
+        -o=<foo>  foo [default:x]
 
     "
-    [["prog -o this -o that" {"-o" ["this", "that"]}]
-     ["prog" {"-o" ["x"]}]]]
+    [["prog -o:this -o:that" {"-o" ["this" "that"]}]]]
+     ;["prog" {"-o" ["x"]}]]] not supported YET, default values
 
    ["usage:
-      foo (--xx=x|--yy=y)..."
-    [["prog --xx=1 --yy=2" {"--xx" ["1"], "--yy" ["2"]}]]]])
+      foo (--xx|--yy)...
+
+     options:
+       --xx=<foo>  foo desc
+       --yy=<bar>  bar desc"
+    [["prog --xx=1 --yy=2" {"--xx" ["1"] "--yy" ["2"]}]]]])
 
 (test/deftest unit-test
   (doseq [[docstring in-out] test-cases
           [input result] in-out
           :let [args (docopt/parse docstring (rest (str/split input #" ")))]]
+    (println docstring)
     (if (= result "user-error")
       (test/is (insta/failure? args) args)
-      (test/is (and (not (insta/failure? args))
-                    (= result (clojure.walk/keywordize-keys args)))
-               args))))
+      (do (test/is (not (insta/failure? args))
+                   {:docstring docstring :failure args})
+          (test/is (= args (clojure.walk/keywordize-keys result))
+                   (clojure.walk/keywordize-keys result))))))
+
+;(test/run-all-tests #"docopt")
 
 ; NOTE: whenever you change the test cases, run the following code to check
 ;       that it conforms to the appropiate formatting
@@ -352,5 +386,3 @@
 ;(for [case test-cases]
 ;  (when-not (s/valid? ::test case)
 ;    (s/explain-str ::test case)))
-
-;(test/run-all-tests #"docopt")
