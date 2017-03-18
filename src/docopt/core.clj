@@ -111,7 +111,7 @@
        :option-name referral
        :multiple    combi/plus
        :required    combi/cat
-       :optional    combi/opt
+       :optional    (comp combi/opt combi/cat)
        :exclusive   combi/alt; %&
        ; drop the name of the program & ignore the use-tag
        :usage-line  (fn [& els] (combi/hide-tag (apply combi/cat (rest els))))
@@ -131,7 +131,7 @@
      :option-name identity
      :multiple    (fn [& v] [:multiple v])
      :required    (fn [& v] v)
-     :optional    identity
+     :optional    (fn [& v] v)
      :exclusive   (fn [& v] v)
      ; drop the name of the program
      :usage-line  (fn [& v] (rest v))
@@ -196,35 +196,33 @@
 
 (-main ["ship" "Guardian" "move" "10" "50" "--speed=20"])
 
+;(def foo
+;  "Usage:
+;    prog.py [--count] --OUT --FILE...
+;
+;    Options:
+;     -f <path> --FILE=<path>  input file[default:foo]
+;     -o --OUT                 out directory
+;     --count N                number of operations")
 
-
-(def foo
-  "Usage:
-    prog.py [--count] --OUT --FILE...
-
-    Options:
-     -f <path> --FILE=<path>  input file[default:foo]
-     -o --OUT                 out directory
-     --count N                number of operations")
-
-(def bar
-  "Usage:
-    quick_example.py tcp <host> <port> [--timeout] [--foo]...
-    quick_example.py serial <port> [--baud] [--timeout]
-    quick_example.py -h | --help | --version
-
-  Options:
-     --timeout=<value>  input file[default:1200]
-     --foo <bar>        baz
-     --baud DB          out directory
-     -h --help          number of operations
-     --version          version")
+;(def bar
+;  "Usage:
+;    quick_example.py tcp <host> <port> [--timeout] [--foo]...
+;    quick_example.py serial <port> [--baud] [--timeout]
+;    quick_example.py -h | --help | --version
+;
+;  Options:
+;     --timeout=<value>  input file[default:1200]
+;     --foo <bar>        baz
+;     --baud DB          out directory
+;     -h --help          number of operations
+;     --version          version")
 
 ;(def baz (merge (non-terminal (first (insta/parse docopt-parser bar)))
 ;                (usage-rules (first (insta/parse docopt-parser bar)))
 ;                (options-rules (second (insta/parse docopt-parser bar)))))
 
-(parse bar
-       ["tcp" "localhost" "20" "--timeout:3200" "--foo=" "2" "--foo=" "3"])
+;(parse bar
+;       ["tcp" "localhost" "20" "--timeout:3200" "--foo=" "2" "--foo=" "3"])
 ;["-h"]
 ;["--version"])
