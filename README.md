@@ -1,6 +1,6 @@
 # docopt.clj
 [![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg?style=plastic)](https://github.com/carocad/docopt.cluno/blob/master/LICENSE)
-
+[![Build Status](https://travis-ci.org/carocad/frechet-dist.svg?branch=master)](https://travis-ci.org/carocad/docopt.clj)
 [![Clojars Project](http://clojars.org/org.clojars.carocad/docopt/latest-version.svg)](http://clojars.org/org.clojars.carocad/docopt)
 
 Creates beautiful command-line interfaces using only your docstring. After all, a good help message has all necessary information in it to make a parser
