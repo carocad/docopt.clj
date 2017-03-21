@@ -33,7 +33,14 @@ Clojure (unnoficial) implementation of [docopt](http://docopt.org/),
   --moored      Moored (anchored) mine.
   --drifting    Drifting mine."
   [& args]
-  (parse (:doc (meta #'-main)) args))
+  (docopt/parse (:doc (meta #'-main)) args))
+```
+
+you can test your cli parser by passing a sequence of string arguments to the `parse` function. The same way that you get from the console.
+
+``` clojure
+(-main "mine" "set" "10" "20" "--drifting")
+; => {:mine "mine", :set "set", :<x> "10", :<y> "20", :--drifting "--drifting"}
 ```
 
 ## Tests
@@ -45,6 +52,15 @@ implementation. Some of them are yet to be implemented and some are not
 going to be implemented at all due to a difference of opinion in the
 ambiguities that the docopt language should accept.
 
-Pull request and are more than welcome :)
+Enjoy it :)
 
 `Copyright (c) 2015 Camilo Roca`
+
+## differences with the original implementation
+- *default* values are not implemented yet
+- short options cannot be grouped yet
+- *arguments* (positional and option's arguments) MUST be wrapped in `<>`
+- `[options]`,`[-]` `[--]` special meaning not supported
+- every option MUST be declared in the `options:` section
+- option's arguments MUST be declared in the `Options:` section
+- option's arguments should be used with either `:` or `=`, e.g. `--speed=10`
