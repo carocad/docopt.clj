@@ -60,6 +60,8 @@ Enjoy it :)
 - *default* values are not implemented yet
 - short options cannot be grouped yet
 - *arguments* (positional and option's arguments) MUST be wrapped in `<>`
+- repeated elements MUST be declared with (`...`), i.e. repeating the same name isn't valid
+  e.g. `example <port> <port>` *invalid !!* reported as a single `<port>`
 - `[options]`,`[-]` `[--]` special meaning not supported
 - every option MUST be declared in the `options:` section
 - option's arguments MUST be declared in the `Options:` section
