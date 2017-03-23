@@ -41,51 +41,46 @@
   OR = '|'          (* mutually exclusive expressions *)
 
   <EOL> = #'(\\n|\\r)+'          (* end of line but not of the string *)
-  " :auto-whitespace (insta/parser "whitespace = #'[\\ \\t]+' (* whitespace *)")))
+  " :auto-whitespace (insta/parser "whitespace = #'[\\ \\t]+'")))
 
 (defn- usage-rules
-  "conver the docopt argument-parsing language-grammar into EBNF notation using
-  instaparse.combinators. The complete Usage section is converted into an flat
-  alternation (use1 | use2 | ...) based on each usage line."
+  "convert the command and arguments defined in the parsed USAGE section to EBNF notation
+   using instaparse.combinators."
   [usage]
-  (let [sentinel (fn [& args] nil)
-        inner    (fn [& v] v)
-        tuse
-        (t/transform
-          {:command     (fn [name] [(keyword name) (combi/string name)])
-           :argument    (fn [name] [(keyword name) (combi/regexp "\\w+")])
-           :option-key  sentinel
-           :option-name sentinel
-           :multiple    inner
-           :required    inner
-           :optional    inner
-           :exclusive   inner
-           ; drop the name of the program
-           :usage-line  (fn [& v] (flatten (rest v)))
-           :USAGE       (fn [& v] (apply concat v))}
-          usage)]
-    (apply hash-map (remove nil? tuse))))
+  (let [elements (into #{} (comp (filter vector?)
+                                 (filter (comp #{:command :argument} first)))
+                           (tree-seq vector? identity usage))]
+    (into {} (for [[k name] elements]
+               (if (= k :command) ; else :argument
+                 [(keyword name) (combi/string name)]
+                 [(keyword name) (combi/regexp "\\w+")])))))
 
 (defn- optionize
-  ([name]
+  "transforms an option (short or long) into a tuple of
+   [keywordized-name EBNF-combinator]. If the accepts an argument, an extra
+   regex match is added"
+  ([name] ;; option with no arg
    [(keyword name) (combi/string name)])
-  ([name _]
+  ([name _] ;; option with arg
    [(keyword name)
     (combi/cat (combi/hide (combi/regexp (str name "[=:]")))
                (combi/regexp "\\S+"))]))
 
 (defn- opt-combi
   [& elements]
-  (let [rel (remove nil? elements)]
+  "transforms an option-line into a 2-tuple {key ebnf-parser}. If an option
+  line contains both short and long options, then the short option is a simple
+  reference to the long one. Default option values are ignored"
+  (let [rel (remove nil? elements)] ;; nil = sentinel for default value
     (if (= 1 (count rel)) [(apply hash-map (first rel))] ;; 2 = long and short option
       (let [pars (apply combi/alt (map second rel))
             name (first (second rel))]
-        [{name pars} {(ffirst rel) (combi/hide-tag (combi/nt name))}]))))
+        [{name pars} ;; main match
+         {(ffirst rel) (combi/hide-tag (combi/nt name))}]))))
 
 (defn- options-rules
-  "conver the docopt argument-parsing language-grammar into EBNF notation using
-  instaparse.combinators. The complete Usage section is converted into an flat
-  alternation (use1 | use2 | ...) based on each usage line."
+  "convert the parsed OPTIONS section into EBNF notation using instaparse.combinators.
+  Each option line is transformed according to opt-combi and optionize rules"
   [options]
   (t/transform
     {:option-name    identity
@@ -99,9 +94,8 @@
     options))
 
 (defn- non-terminal
-  "conver the docopt argument-parsing language-grammar into EBNF notation using
-  instaparse.combinators. The complete Usage section is converted into an flat
-  alternation (use1 | use2 | ...) based on each usage line."
+  "converts docopt's USAGE section into a hash-map of
+  use-case -> matching components (as keywords)"
   [usage]
   (let [referral (comp combi/nt keyword)]
     (t/transform
@@ -123,6 +117,8 @@
       usage)))
 
 (defn- manifold
+  "transform everything but the :multiple definitions into sequences
+  to pinpoint then later on in 'multiple-nt'"
   [usage]
   (t/transform
     {:command     identity
@@ -139,6 +135,8 @@
     usage))
 
 (defn- multiple-nt
+  "transform the USAGE section into a set of keywords can be repeated by the
+  user in the CLI according to docopt's ellipsis usage."
   [usage]
   (let [reorg (manifold usage)
         mulel (sequence (comp (filter vector?)
@@ -149,6 +147,9 @@
     (into #{} (map keyword) eles)))
 
 (defn- combine
+  "transform the parsed CLI arguments into a hash-map of :name value, where
+  value is either a string or a list with all passed values. Only elements
+  defined with ellipsis (...) are combined into a list"
   [result tags]
   (let [all     (filter (comp tags first) (rest result))
         ks      (into #{} (map first all))
@@ -177,3 +178,24 @@
 ;(def baz (merge (non-terminal (first (insta/parse docopt-parser bar)))
 ;                (usage-rules (first (insta/parse docopt-parser bar)))
 ;                (options-rules (second (insta/parse docopt-parser bar)))))
+
+;(def bar "
+;Naval Fate.
+;
+;Usage:
+;prog ship new <name>...
+;prog ship [<name>] move <x> <y> [--speed]
+;prog ship shoot <x> <y>
+;prog mine (set|remove) <x> <y> [--moored|--drifting]
+;prog -h | --help
+;prog --version
+;
+;Options:
+;-h --help     Show this screen.
+;--version     Show version.
+;--speed=<kn>  Speed in knots [default:10].
+;--moored      Mored (anchored) mine.
+;--drifting    Drifting mine.")
+
+;(-main "mine set 10 20 --drifting")
+;(-main ["mine" "set" "10" "20" "--drifting"])
