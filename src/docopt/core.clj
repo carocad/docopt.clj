@@ -67,10 +67,10 @@
                (combi/regexp "\\S+"))]))
 
 (defn- opt-combi
-  [& elements]
   "transforms an option-line into a 2-tuple {key ebnf-parser}. If an option
   line contains both short and long options, then the short option is a simple
   reference to the long one. Default option values are ignored"
+  [& elements]
   (let [rel (remove nil? elements)] ;; nil = sentinel for default value
     (if (= 1 (count rel)) [(apply hash-map (first rel))] ;; 2 = long and short option
       (let [pars (apply combi/alt (map second rel))
