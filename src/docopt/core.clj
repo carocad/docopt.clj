@@ -44,8 +44,8 @@
   " :auto-whitespace (insta/parser "whitespace = #'[\\ \\t]+'")))
 
 (defn- usage-rules
-  "convert the command and arguments defined in the parsed USAGE section to EBNF notation
-   using instaparse.combinators."
+  "convert the command and arguments defined in the parsed USAGE section to EBNF
+   notation using instaparse.combinators."
   [usage]
   (let [elements (into #{} (comp (filter vector?)
                                  (filter (comp #{:command :argument} first)))
@@ -57,8 +57,8 @@
 
 (defn- optionize
   "transforms an option (short or long) into a tuple of
-   [keywordized-name EBNF-combinator]. If the accepts an argument, an extra
-   regex match is added"
+   [keywordized-name EBNF-combinator]. If the option accepts an argument,
+   an extra regex match is added"
   ([name] ;; option with no arg
    [(keyword name) (combi/string name)])
   ([name _] ;; option with arg
@@ -68,7 +68,7 @@
 
 (defn- opt-combi
   "transforms an option-line into a 2-tuple {key ebnf-parser}. If an option
-  line contains both short and long options, then the short option is a simple
+  line contains both short and long options, the short option is a simple
   reference to the long one. Default option values are ignored"
   [& elements]
   (let [rel (remove nil? elements)] ;; nil = sentinel for default value
@@ -116,47 +116,27 @@
                         (assoc use-cases :USAGE content)))};; add the start rule
       usage)))
 
-(defn- manifold
-  "transform everything but the :multiple definitions into sequences
-  to pinpoint then later on in 'multiple-nt'"
-  [usage]
-  (t/transform
-    {:command     identity
-     :argument    identity
-     :option-key  identity
-     :option-name identity
-     :multiple    (fn [& v] [:multiple v])
-     :required    (fn [& v] v)
-     :optional    (fn [& v] v)
-     :exclusive   (fn [& v] v)
-     ; drop the name of the program
-     :usage-line  (fn [& v] (rest v))
-     :USAGE       (fn [& v] (apply concat v))}
-    usage))
-
 (defn- multiple-nt
-  "transform the USAGE section into a set of keywords can be repeated by the
-  user in the CLI according to docopt's ellipsis usage."
+  "transform the USAGE section into a set of keywords that can be repeated by the
+   user in the CLI according to docopt's ellipsis usage."
   [usage]
-  (let [reorg (manifold usage)
-        mulel (sequence (comp (filter vector?)
-                              (filter #(= :multiple (first %)))
-                              (map rest))
-                (tree-seq sequential? identity reorg))
-        eles  (flatten mulel)]
-    (into #{} (map keyword) eles)))
+  (let [elements  (tree-seq vector? identity usage)
+        multiples (comp (filter vector?); any instaparse result
+                        (filter (comp #{:multiple} first))
+                        (distinct))]
+    (into #{} (comp (filter string?) (map keyword))
+      (tree-seq sequential? identity (sequence multiples elements)))))
 
 (defn- combine
-  "transform the parsed CLI arguments into a hash-map of :name value, where
+  "transform the parsed CLI arguments into a hash-map of {:name value}, where
   value is either a string or a list with all passed values. Only elements
   defined with ellipsis (...) are combined into a list"
-  [result tags]
-  (let [all     (filter (comp tags first) (rest result))
-        ks      (into #{} (map first all))
-        cleaned (into {} (remove (comp tags first) (rest result)))]
-    (into cleaned
-      (for [k ks]
-        [k (sequence (comp (filter (comp #{k} first)) (map second)) all)]))))
+  [result tags] ; rest result -> drop USAGE
+  (let [multiples (into #{} (comp (map first) (filter tags)) (rest result))
+        singles   (into {} (remove (comp tags first) (rest result)))
+        elements  (group-by first (rest result))]
+    (into singles (map (fn [k] (vector k (map second (k elements)))))
+                  multiples)))
 
 (defn parse
   "Parses a docstring, generates a custom parser for the specific cli options
@@ -173,29 +153,34 @@
                               :start :USAGE :auto-whitespace :standard)
             result          (cli-parser (str/join " " args))]
         (if (insta/failure? result) result
-          (combine result (multiple-nt usage))))))) ;(t/transform {:USAGE #(into (hash-map) %&)} result))))))
+          (combine result (multiple-nt usage)))))))
+          ;(t/transform {:USAGE #(into (hash-map) %&)} result))))))
 
-;(def baz (merge (non-terminal (first (insta/parse docopt-parser bar)))
-;                (usage-rules (first (insta/parse docopt-parser bar)))
-;                (options-rules (second (insta/parse docopt-parser bar)))))
+;(non-terminal (first (insta/parse docopt-parser bar)))
+;(usage-rules (first (insta/parse docopt-parser bar)))
+;(options-rules (second (insta/parse docopt-parser bar)))))
 
-;(def bar "
+;FIXME: there is an issue with the whitespaces which prevents the docstring from
+; being indented as usual. Instead I have to start the docstring on the first line
+; and indent the docstring most to the left
+;(defn -main "
 ;Naval Fate.
 ;
 ;Usage:
-;prog ship new <name>...
-;prog ship [<name>] move <x> <y> [--speed]
-;prog ship shoot <x> <y>
-;prog mine (set|remove) <x> <y> [--moored|--drifting]
-;prog -h | --help
-;prog --version
+; naval_fate.py ship new <name>...
+; naval_fate.py ship <name> move <x> <y> [--speed]
+; naval_fate.py ship shoot <x> <y>
+; naval_fate.py mine (set|remove) <x> <y> [--moored | --drifting]
+; naval_fate.py (-h | --help)
+; naval_fate.py --version
 ;
 ;Options:
-;-h --help     Show this screen.
-;--version     Show version.
-;--speed=<kn>  Speed in knots [default:10].
-;--moored      Mored (anchored) mine.
-;--drifting    Drifting mine.")
+; -h --help     Show this screen.
+; --version     Show version.
+; --speed=<kn>  Speed in knots [default: 10].
+; --moored      Moored (anchored) mine.
+; --drifting    Drifting mine."
+;  [& args]
+;  (parse (:doc (meta #'-main)) args))
 
-;(-main "mine set 10 20 --drifting")
-;(-main ["mine" "set" "10" "20" "--drifting"])
+;(def bar (:doc (meta #'-main)))
