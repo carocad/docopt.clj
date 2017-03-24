@@ -1,4 +1,4 @@
-(defproject org.clojars.carocad/docopt "0.2.0"
+(defproject org.clojars.carocad/docopt "0.2.1"
   :description "Docopt creates beautiful command-line interfaces - clojure (unnoficial) version"
   :url "https://github.com/carocad/docopt.clj"
   :plugins [[jonase/eastwood "0.2.3"]]
