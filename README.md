@@ -1,3 +1,6 @@
+### deprecated
+- use some of the available libraries for Java and Javascript from [docopt's organization](https://github.com/docopt). Clojure has wonderful interop so there is no need to reinvent the wheel :)
+
 # docopt.clj
 [![GitHub license](https://img.shields.io/github/license/mashape/apistatus.svg?style=plastic)](https://github.com/carocad/docopt.cluno/blob/master/LICENSE)
 [![Build Status](https://travis-ci.org/carocad/docopt.clj.svg?branch=master)](https://travis-ci.org/carocad/docopt.clj)
